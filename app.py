@@ -1,153 +1,175 @@
-from flask import Flask, render_template_string
+from flask import Flask, render_template_string, request
 import requests
-import json
-import os
+import sqlite3
 from datetime import datetime
 
 app = Flask(__name__)
 
-DATA_FILE = "data.json"
+# ================= DB SETUP =================
+conn = sqlite3.connect("prices.db", check_same_thread=False)
+cursor = conn.cursor()
 
-# Default values
-default_data = {
-    "gold": [],
-    "silver": [],
-    "platinum": []
-}
+cursor.execute("""
+CREATE TABLE IF NOT EXISTS prices (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    gold REAL,
+    silver REAL,
+    platinum REAL,
+    time TEXT
+)
+""")
+conn.commit()
 
-# Load or create history file
-if not os.path.exists(DATA_FILE):
-    with open(DATA_FILE, "w") as f:
-        json.dump(default_data, f)
-
-def load_data():
-    with open(DATA_FILE, "r") as f:
-        return json.load(f)
-
-def save_data(data):
-    with open(DATA_FILE, "w") as f:
-        json.dump(data, f)
-
-# 🌐 Fetch real price (mock fallback)
+# ================= API =================
 def fetch_prices():
     try:
-        # Example free API (may require key)
         url = "https://api.metals.live/v1/spot"
-        res = requests.get(url, timeout=5).json()
+        data = requests.get(url, timeout=5).json()
 
-        gold = res[0]['gold'] * 85   # convert approx to INR
-        silver = res[1]['silver'] * 85
-        platinum = res[2]['platinum'] * 85
+        gold = data[0]['gold'] * 85
+        silver = data[1]['silver'] * 85
+        platinum = data[2]['platinum'] * 85
 
         return int(gold), int(silver), int(platinum)
-
     except:
-        # fallback values
         return 6200, 75, 2500
 
+# ================= ROUTE =================
 @app.route('/')
 def home():
-    data = load_data()
+    currency = request.args.get("currency", "INR")
 
     gold, silver, platinum = fetch_prices()
 
-    # Append new values
-    data["gold"].append(gold)
-    data["silver"].append(silver)
-    data["platinum"].append(platinum)
+    # Currency conversion (simple)
+    rates = {"INR":1, "USD":0.012, "EUR":0.011}
+    rate = rates.get(currency, 1)
 
-    # Keep last 10 values
-    for k in data:
-        data[k] = data[k][-10:]
+    gold *= rate
+    silver *= rate
+    platinum *= rate
 
-    save_data(data)
+    # Save to DB
+    cursor.execute("INSERT INTO prices (gold, silver, platinum, time) VALUES (?,?,?,?)",
+                   (gold, silver, platinum, datetime.now().strftime("%H:%M:%S")))
+    conn.commit()
 
-    def trend(arr):
-        if len(arr) < 2:
+    # Get history
+    cursor.execute("SELECT gold, silver, platinum FROM prices ORDER BY id DESC LIMIT 10")
+    rows = cursor.fetchall()[::-1]
+
+    gold_data = [r[0] for r in rows]
+    silver_data = [r[1] for r in rows]
+    platinum_data = [r[2] for r in rows]
+
+    # Trend arrow
+    def trend(data):
+        if len(data) < 2:
             return "→"
-        return "🔼" if arr[-1] > arr[-2] else "🔽"
+        return "🔼" if data[-1] > data[-2] else "🔽"
+
+    # Alert
+    alert = ""
+    if len(gold_data) >= 2 and gold_data[-1] > gold_data[-2]:
+        alert = "🚨 Gold price increased!"
 
     HTML = """
+    <!DOCTYPE html>
     <html>
     <head>
-        <title>Metal Dashboard</title>
+        <title>Pro Metal Dashboard</title>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
         <style>
             body {
                 font-family: Arial;
-                background: linear-gradient(135deg,#1f4037,#99f2c8);
-                text-align: center;
+                margin: 0;
+                background: linear-gradient(135deg,#141e30,#243b55);
                 color: white;
+                text-align: center;
             }
 
             .container {
                 display: flex;
+                flex-wrap: wrap;
                 justify-content: center;
-                gap: 20px;
-                margin-top: 30px;
+                gap: 15px;
+                margin-top: 20px;
             }
 
             .card {
-                background: rgba(0,0,0,0.3);
+                background: rgba(255,255,255,0.1);
                 padding: 20px;
                 border-radius: 15px;
-                width: 200px;
+                width: 250px;
+            }
+
+            select {
+                padding: 8px;
+                border-radius: 8px;
+                margin-top: 10px;
             }
 
             canvas {
-                margin-top: 40px;
+                margin-top: 30px;
                 background: white;
                 border-radius: 10px;
+                width: 90% !important;
+                max-width: 600px;
+            }
+
+            .alert {
+                color: yellow;
+                margin-top: 10px;
             }
         </style>
     </head>
 
     <body>
 
-    <h1>💰 Live Metal Dashboard</h1>
+    <h2>💰 Smart Metal Dashboard</h2>
+
+    <form method="GET">
+        <select name="currency" onchange="this.form.submit()">
+            <option value="INR" {% if currency=='INR' %}selected{% endif %}>INR</option>
+            <option value="USD" {% if currency=='USD' %}selected{% endif %}>USD</option>
+            <option value="EUR" {% if currency=='EUR' %}selected{% endif %}>EUR</option>
+        </select>
+    </form>
 
     <div class="container">
         <div class="card">
-            <h2>Gold {{g_trend}}</h2>
-            <p>₹ {{gold}}</p>
+            <h3>Gold {{g_trend}}</h3>
+            <p>{{gold}}</p>
         </div>
 
         <div class="card">
-            <h2>Silver {{s_trend}}</h2>
-            <p>₹ {{silver}}</p>
+            <h3>Silver {{s_trend}}</h3>
+            <p>{{silver}}</p>
         </div>
 
         <div class="card">
-            <h2>Platinum {{p_trend}}</h2>
-            <p>₹ {{platinum}}</p>
+            <h3>Platinum {{p_trend}}</h3>
+            <p>{{platinum}}</p>
         </div>
     </div>
 
-    <canvas id="chart" width="600" height="300"></canvas>
+    <div class="alert">{{alert}}</div>
+
+    <canvas id="chart"></canvas>
 
     <script>
-        const ctx = document.getElementById('chart');
+        setTimeout(() => location.reload(), 10000);
 
-        new Chart(ctx, {
+        new Chart(document.getElementById('chart'), {
             type: 'line',
             data: {
                 labels: {{labels}},
                 datasets: [
-                    {
-                        label: 'Gold',
-                        data: {{gold_data}},
-                        borderColor: 'gold'
-                    },
-                    {
-                        label: 'Silver',
-                        data: {{silver_data}},
-                        borderColor: 'gray'
-                    },
-                    {
-                        label: 'Platinum',
-                        data: {{platinum_data}},
-                        borderColor: 'cyan'
-                    }
+                    {label:'Gold', data: {{gold_data}}, borderColor:'gold'},
+                    {label:'Silver', data: {{silver_data}}, borderColor:'gray'},
+                    {label:'Platinum', data: {{platinum_data}}, borderColor:'cyan'}
                 ]
             }
         });
@@ -157,20 +179,22 @@ def home():
     </html>
     """
 
-    labels = list(range(len(data["gold"])))
+    labels = list(range(len(gold_data)))
 
     return render_template_string(
         HTML,
-        gold=gold,
-        silver=silver,
-        platinum=platinum,
-        gold_data=data["gold"],
-        silver_data=data["silver"],
-        platinum_data=data["platinum"],
+        gold=round(gold,2),
+        silver=round(silver,2),
+        platinum=round(platinum,2),
+        gold_data=gold_data,
+        silver_data=silver_data,
+        platinum_data=platinum_data,
         labels=labels,
-        g_trend=trend(data["gold"]),
-        s_trend=trend(data["silver"]),
-        p_trend=trend(data["platinum"])
+        g_trend=trend(gold_data),
+        s_trend=trend(silver_data),
+        p_trend=trend(platinum_data),
+        alert=alert,
+        currency=currency
     )
 
 if __name__ == "__main__":
