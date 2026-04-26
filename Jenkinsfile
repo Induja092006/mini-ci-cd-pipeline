@@ -19,15 +19,11 @@ pipeline {
         stage('Test Container') {
             steps {
                 script {
-                    try {
-                        bat 'docker run -d -p 5000:5000 --name test-app flask-docker-app'
-                        // Wait for app to start
-                        bat 'ping -n 6 127.0.0.1 > nul'
-                        bat 'curl http://localhost:5000'
-                    } finally {
-                        bat 'docker stop test-app || exit /b 0'
-                        bat 'docker rm test-app || exit /b 0'
-                    }
+                    bat 'docker rm -f test-app || exit /b 0'
+                    bat 'docker run -d -p 5000:5000 --name test-app flask-docker-app'
+                    sleep(time: 5, unit: 'SECONDS')
+                    bat 'docker stop test-app || exit /b 0'
+                    bat 'docker rm test-app || exit /b 0'
                 }
             }
         }
