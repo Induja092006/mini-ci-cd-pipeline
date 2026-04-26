@@ -1,101 +1,87 @@
-from flask import Flask, render_template_string
-import datetime
-import socket
-import random
+from flask import Flask, render_template_string, request
 
 app = Flask(__name__)
+
+gold_price = 6000  # initial price
+history = [gold_price]
 
 HTML = """
 <!DOCTYPE html>
 <html>
 <head>
-    <title>DevOps Live Dashboard</title>
-    <meta http-equiv="refresh" content="5">
+    <title>Gold Price Tracker</title>
     <style>
         body {
-            margin: 0;
-            font-family: 'Segoe UI', sans-serif;
-            background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
+            font-family: Arial;
+            background: linear-gradient(135deg, #1e3c72, #f7971e);
             color: white;
             text-align: center;
-        }
-
-        .container {
-            margin-top: 60px;
+            padding: 40px;
         }
 
         .card {
-            background: rgba(255,255,255,0.08);
+            background: rgba(0,0,0,0.3);
             padding: 30px;
-            border-radius: 20px;
-            width: 420px;
+            border-radius: 15px;
+            width: 400px;
             margin: auto;
-            backdrop-filter: blur(10px);
-            box-shadow: 0 0 30px rgba(0,0,0,0.5);
-            transition: transform 0.3s;
-        }
-
-        .card:hover {
-            transform: scale(1.05);
         }
 
         h1 {
             margin-bottom: 10px;
         }
 
-        .status {
-            font-size: 22px;
-            color: #00ffcc;
-            margin-bottom: 20px;
+        .price {
+            font-size: 40px;
+            margin: 20px 0;
         }
 
-        .info {
-            font-size: 16px;
-            text-align: left;
-            margin-top: 20px;
+        .up { color: #00ff99; }
+        .down { color: #ff4d4d; }
+
+        input {
+            padding: 10px;
+            border-radius: 8px;
+            border: none;
+            width: 80%;
+            margin-top: 10px;
         }
 
-        .progress {
-            background: #333;
-            border-radius: 20px;
-            overflow: hidden;
-            margin-top: 20px;
+        button {
+            margin-top: 10px;
+            padding: 10px;
+            width: 85%;
+            border: none;
+            border-radius: 10px;
+            background: gold;
+            cursor: pointer;
         }
 
-        .progress-bar {
-            height: 20px;
-            width: {{progress}}%;
-            background: linear-gradient(90deg, #00ffcc, #00ccff);
-            transition: width 1s;
-        }
-
-        .footer {
+        .history {
             margin-top: 20px;
             font-size: 14px;
-            color: #aaa;
         }
     </style>
 </head>
 <body>
 
-<div class="container">
-    <div class="card">
-        <h1>🚀 DevOps Dashboard</h1>
-        <div class="status">Pipeline Running ✅</div>
+<div class="card">
+    <h1>💰 Gold Price Tracker</h1>
 
-        <div class="progress">
-            <div class="progress-bar"></div>
-        </div>
+    <div class="price {{trend}}">
+        ₹ {{price}}
+    </div>
 
-        <div class="info">
-            <p><b>Server:</b> {{hostname}}</p>
-            <p><b>Time:</b> {{time}}</p>
-            <p><b>Build:</b> SUCCESS</p>
-        </div>
+    <form method="POST">
+        <input type="number" name="new_price" placeholder="Enter new gold price" required>
+        <button>Update Price</button>
+    </form>
 
-        <div class="footer">
-            Auto-refresh every 5 seconds 🔄
-        </div>
+    <div class="history">
+        <b>Recent Prices:</b><br>
+        {% for p in history %}
+            ₹ {{p}} 
+        {% endfor %}
     </div>
 </div>
 
@@ -103,13 +89,31 @@ HTML = """
 </html>
 """
 
-@app.route('/')
+@app.route('/', methods=['GET', 'POST'])
 def home():
+    global gold_price, history
+
+    trend = ""
+
+    if request.method == 'POST':
+        new_price = int(request.form['new_price'])
+
+        if new_price > gold_price:
+            trend = "up"
+        elif new_price < gold_price:
+            trend = "down"
+
+        gold_price = new_price
+        history.append(new_price)
+
+        if len(history) > 5:
+            history.pop(0)
+
     return render_template_string(
         HTML,
-        hostname=socket.gethostname(),
-        time=datetime.datetime.now(),
-        progress=random.randint(70, 100)
+        price=gold_price,
+        history=history,
+        trend=trend
     )
 
 if __name__ == '__main__':
