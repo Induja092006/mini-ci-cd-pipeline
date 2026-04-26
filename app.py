@@ -1,119 +1,105 @@
-from flask import Flask, render_template_string, request
+from flask import Flask, render_template_string
 
 app = Flask(__name__)
 
-gold_price = 6000  # initial price
-history = [gold_price]
+# 🔥 CHANGE THESE VALUES WHEN MARKET UPDATES
+gold_price = 6200
+silver_price = 75
+platinum_price = 2500
 
 HTML = """
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Gold Price Tracker</title>
+    <title>Metal Price Dashboard</title>
     <style>
         body {
-            font-family: Arial;
-            background: linear-gradient(135deg, #1e3c72, #f7971e);
+            margin: 0;
+            font-family: 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #1f1c2c, #928dab);
             color: white;
             text-align: center;
-            padding: 40px;
-        }
-
-        .card {
-            background: rgba(0,0,0,0.3);
-            padding: 30px;
-            border-radius: 15px;
-            width: 400px;
-            margin: auto;
         }
 
         h1 {
-            margin-bottom: 10px;
+            margin-top: 30px;
+        }
+
+        .container {
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            margin-top: 50px;
+        }
+
+        .card {
+            background: rgba(255,255,255,0.1);
+            padding: 30px;
+            border-radius: 20px;
+            width: 200px;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 0 20px rgba(0,0,0,0.4);
+            transition: 0.3s;
+        }
+
+        .card:hover {
+            transform: scale(1.05);
         }
 
         .price {
-            font-size: 40px;
-            margin: 20px 0;
-        }
-
-        .up { color: #00ff99; }
-        .down { color: #ff4d4d; }
-
-        input {
-            padding: 10px;
-            border-radius: 8px;
-            border: none;
-            width: 80%;
+            font-size: 28px;
             margin-top: 10px;
         }
 
-        button {
-            margin-top: 10px;
-            padding: 10px;
-            width: 85%;
-            border: none;
-            border-radius: 10px;
-            background: gold;
-            cursor: pointer;
-        }
+        .gold { color: gold; }
+        .silver { color: #c0c0c0; }
+        .platinum { color: #00e6e6; }
 
-        .history {
-            margin-top: 20px;
+        .footer {
+            margin-top: 40px;
             font-size: 14px;
+            color: #ddd;
         }
     </style>
 </head>
 <body>
 
-<div class="card">
-    <h1>💰 Gold Price Tracker</h1>
+<h1>💰 Live Metal Prices</h1>
 
-    <div class="price {{trend}}">
-        ₹ {{price}}
+<div class="container">
+
+    <div class="card">
+        <h2 class="gold">Gold</h2>
+        <div class="price">₹ {{gold}}</div>
     </div>
 
-    <form method="POST">
-        <input type="number" name="new_price" placeholder="Enter new gold price" required>
-        <button>Update Price</button>
-    </form>
-
-    <div class="history">
-        <b>Recent Prices:</b><br>
-        {% for p in history %}
-            ₹ {{p}} 
-        {% endfor %}
+    <div class="card">
+        <h2 class="silver">Silver</h2>
+        <div class="price">₹ {{silver}}</div>
     </div>
+
+    <div class="card">
+        <h2 class="platinum">Platinum</h2>
+        <div class="price">₹ {{platinum}}</div>
+    </div>
+
+</div>
+
+<div class="footer">
+    🔄 Updated via CI/CD Pipeline
 </div>
 
 </body>
 </html>
 """
 
-@app.route('/', methods=['GET', 'POST'])
+@app.route('/')
 def home():
-    global gold_price, history
-
-    trend = ""
-
-    if request.method == 'POST':
-        new_price = int(request.form['new_price'])
-
-        if new_price > gold_price:
-            trend = "up"
-        elif new_price < gold_price:
-            trend = "down"
-
-        gold_price = new_price
-        history.append(new_price)
-
-        if len(history) > 5:
-            history.pop(0)
-
     return render_template_string(
         HTML,
-        price=gold_price,
-        history=history,
-        trend=trend
+        gold=gold_price,
+        silver=silver_price,
+        platinum=platinum_price
     )
 
 if __name__ == '__main__':
