@@ -5,15 +5,16 @@ from datetime import datetime
 
 app = Flask(__name__)
 
-# ================= DB =================
+# ================= DATABASE =================
 def get_db():
     conn = sqlite3.connect("prices.db")
     return conn
 
 
-# Create table safely
+# Create table safely once
 conn = get_db()
 cursor = conn.cursor()
+
 cursor.execute("""
 CREATE TABLE IF NOT EXISTS prices (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -23,6 +24,7 @@ CREATE TABLE IF NOT EXISTS prices (
     time TEXT
 )
 """)
+
 conn.commit()
 conn.close()
 
@@ -34,7 +36,7 @@ def fetch_prices():
         response = requests.get(url, timeout=5)
 
         if response.status_code != 200:
-            raise Exception("API failed")
+            raise Exception("API error")
 
         data = response.json()
 
@@ -62,7 +64,7 @@ def home():
     silver *= rate
     platinum *= rate
 
-    # DB insert
+    # Save to DB
     conn = get_db()
     cursor = conn.cursor()
 
