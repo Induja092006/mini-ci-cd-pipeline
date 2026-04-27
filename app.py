@@ -32,7 +32,7 @@ def fetch_prices():
 
         return int(gold), int(silver), int(platinum)
     except:
-        return 6200, 75, 2500
+        return 6250, 75, 2500
 
 # ================= ROUTE =================
 @app.route('/')
