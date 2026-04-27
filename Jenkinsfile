@@ -2,6 +2,7 @@ pipeline {
     agent any
 
     stages {
+
         stage('Checkout') {
             steps {
                 checkout scm
@@ -16,16 +17,24 @@ pipeline {
             }
         }
 
+        stage('Stop & Remove Old Container') {
+            steps {
+                script {
+                    // Stop container if running (ignore errors)
+                    bat 'docker stop test-app || exit /b 0'
+
+                    // Force remove container (important fix for your error)
+                    bat 'docker rm -f test-app || exit /b 0'
+                }
+            }
+        }
+
         stage('Run App') {
             steps {
                 script {
-                    // Remove old container if exists
-                    bat 'docker rm -f test-app || exit /b 0'
-
-                    // Run new container
+                    // Run new container safely
                     bat 'docker run -d -p 5000:5000 --name test-app flask-docker-app'
 
-                    // Print info
                     echo "App is running at: http://localhost:5000"
                 }
             }
