@@ -15,14 +15,13 @@ pipeline {
             }
         }
 
-        stage('Stop Old Container') {
+        stage('Stop & Clean Old Container') {
             steps {
                 script {
-                    // Stop container if running (ignore error if not exists)
                     bat 'docker stop test-app || exit /b 0'
-
-                    // Force remove container (fixes your error)
+                    bat 'timeout /t 3'
                     bat 'docker rm -f test-app || exit /b 0'
+                    bat 'docker container prune -f'
                 }
             }
         }
@@ -30,6 +29,7 @@ pipeline {
         stage('Run Container') {
             steps {
                 script {
+                    bat 'timeout /t 2'
                     bat 'docker run -d -p 5000:5000 --name test-app flask-docker-app'
                     echo "App running at: http://localhost:5000"
                 }
