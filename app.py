@@ -90,7 +90,7 @@ def home():
 
     alert = ""
     if len(gold_data) >= 2 and gold_data[-1] > gold_data[-2]:
-        alert = "🚨 Gold price increased!"
+        alert = "🚨 Gold price increased!!"
 
     HTML = """
     <!DOCTYPE html>
