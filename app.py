@@ -1,40 +1,129 @@
-from flask import Flask, request, jsonify, render_template
-import pandas as pd
-import pickle
+from flask import Flask
 
 app = Flask(__name__)
 
-# Load trained model
-model = pickle.load(open("trained_model.pkl", "rb"))
-
 @app.route('/')
 def home():
-    return "🚀 AI Secure Medical Dashboard Running!"
+    return """
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Deep Blue Calculator</title>
+    <style>
+        * { box-sizing: border-box; transition: all 0.2s ease; }
+        body {
+            margin: 0;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background-color: #001220;
+            font-family: 'Segoe UI', Roboto, sans-serif;
+        }
+        .calculator {
+            background-color: #002b4e;
+            width: 100%;
+            max-width: 380px;
+            padding: 30px;
+            border-radius: 40px;
+            box-shadow: 0 25px 50px rgba(0,0,0,0.5);
+            border: 1px solid #004a87;
+        }
+        h2 { color: #80caff; text-align: center; margin-top: 0; font-weight: 300; letter-spacing: 2px; }
+        #display {
+            width: 100%;
+            height: 80px;
+            background: #001a30;
+            border: 2px solid #004a87;
+            border-radius: 20px;
+            margin-bottom: 25px;
+            color: #ffffff;
+            font-size: 2.5rem;
+            text-align: right;
+            padding: 20px;
+            box-shadow: inset 0 4px 10px rgba(0,0,0,0.3);
+        }
+        .grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; }
+        button {
+            height: 70px;
+            border-radius: 20px;
+            border: none;
+            cursor: pointer;
+            font-size: 1.4rem;
+            font-weight: 600;
+            background-color: #004a87;
+            color: #ffffff;
+        }
+        button:hover { background-color: #0066b8; transform: translateY(-3px); }
+        button:active { transform: scale(0.95); }
+        
+        .op { background-color: #007bff; }
+        .clear { grid-column: span 2; background-color: #001a30; color: #80caff; border: 1px solid #004a87; }
+        .equal { grid-column: span 2; background-color: #00d2ff; color: #002b4e; }
+        .equal:hover { background-color: #ffffff; }
+
+        @media (max-width: 400px) {
+            .calculator { padding: 20px; border-radius: 0; height: 100vh; max-width: 100%; display: flex; flex-direction: column; justify-content: center; }
+        }
+    </style>
+</head>
+<body>
+    <div class="calculator">
+        <h2>BLUE UI</h2>
+        <input type="text" id="display" disabled value="0">
+        <div class="grid">
+            <button class="clear" onclick="clearD()">CLEAR</button>
+            <button class="op" onclick="add('/')">÷</button>
+            <button class="op" onclick="add('*')">×</button>
+            <button onclick="add('7')">7</button>
+            <button onclick="add('8')">8</button>
+            <button onclick="add('9')">9</button>
+            <button class="op" onclick="add('-')">-</button>
+            <button onclick="add('4')">4</button>
+            <button onclick="add('5')">5</button>
+            <button onclick="add('6')">6</button>
+            <button class="op" onclick="add('+')">+</button>
+            <button onclick="add('1')">1</button>
+            <button onclick="add('2')">2</button>
+            <button onclick="add('3')">3</button>
+            <button onclick="add('.')">.</button>
+            <button onclick="add('0')">0</button>
+            <button class="equal" onclick="calc()">=</button>
+        </div>
+    </div>
+
+    <script>
+        let d = document.getElementById('display');
+
+        function add(v) {
+            if (d.value === '0' && v !== '.') {
+                d.value = v;
+            } else {
+                d.value += v;
+            }
+        }
+
+        function clearD() {
+            d.value = '0';
+        }
+
+        function calc() {
+            try {
+                d.value = eval(d.value) || '0';
+            } catch {
+                d.value = 'Error';
+            }
+        }
+    </script>
+</body>
+</html>
+"""
 
 @app.route('/health')
 def health():
-    return jsonify({"status": "OK"})
-
-@app.route('/upload', methods=['POST'])
-def upload():
-    file = request.files['file']
-    
-    if not file:
-        return jsonify({"error": "No file uploaded"}), 400
-
-    df = pd.read_csv(file)
-
-    # Predict anomalies
-    predictions = model.predict(df)
-
-    result = []
-    for i, p in enumerate(predictions):
-        result.append({
-            "record": i,
-            "status": "⚠️ Suspicious" if p == 1 else "✅ Safe"
-        })
-
-    return jsonify(result)
+    return {"status": "OK"}
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)
