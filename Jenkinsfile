@@ -19,7 +19,7 @@ pipeline {
             steps {
                 script {
                     bat 'docker stop test-app || exit /b 0'
-                    bat 'timeout /t 3'
+                    ping 127.0.0.1 -n 4 > nul
                     bat 'docker rm -f test-app || exit /b 0'
                     bat 'docker container prune -f'
                 }
