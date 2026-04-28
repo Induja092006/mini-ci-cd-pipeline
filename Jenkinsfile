@@ -19,17 +19,20 @@ pipeline {
             steps {
                 script {
                     bat 'docker stop test-app || exit /b 0'
-                    ping 127.0.0.1 -n 4 > nul
                     bat 'docker rm -f test-app || exit /b 0'
                     bat 'docker container prune -f'
                 }
+                // Proper delay (instead of ping/timeout issue)
+                sleep(time: 3, unit: 'SECONDS')
             }
         }
 
         stage('Run Container') {
             steps {
                 script {
-                    bat 'timeout /t 2'
+                    // short delay before run
+                    sleep(time: 2, unit: 'SECONDS')
+
                     bat 'docker run -d -p 5000:5000 --name test-app flask-docker-app'
                     echo "App running at: http://localhost:5000"
                 }
@@ -39,8 +42,10 @@ pipeline {
         stage('Health Check') {
             steps {
                 script {
-                    bat 'timeout /t 5'
-                    bat 'curl http://localhost:5000 || exit /b 0'
+                    // wait for app startup
+                    sleep(time: 5, unit: 'SECONDS')
+
+                    bat 'curl http://localhost:5000 || exit /b 1'
                 }
             }
         }
@@ -49,6 +54,12 @@ pipeline {
     post {
         always {
             cleanWs()
+        }
+        success {
+            echo '✅ Deployment Successful!'
+        }
+        failure {
+            echo '❌ Deployment Failed!'
         }
     }
 }
