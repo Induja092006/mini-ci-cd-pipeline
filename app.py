@@ -1,10 +1,8 @@
-from flask import Flask
+from flask import Flask, render_template_string
 
 app = Flask(__name__)
 
-@app.route('/')
-def home():
-    return """
+HTML_CODE = """
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -31,7 +29,7 @@ def home():
             box-shadow: 0 25px 50px rgba(0,0,0,0.5);
             border: 1px solid #004a87;
         }
-        h2 { color: #80caff; text-align: center; margin-top: 0; font-weight: 300; letter-spacing: 2px; }
+        h2 { color: #80caff; text-align: center; margin-top: 0; }
         #display {
             width: 100%;
             height: 80px;
@@ -43,7 +41,6 @@ def home():
             font-size: 2.5rem;
             text-align: right;
             padding: 20px;
-            box-shadow: inset 0 4px 10px rgba(0,0,0,0.3);
         }
         .grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; }
         button {
@@ -52,21 +49,12 @@ def home():
             border: none;
             cursor: pointer;
             font-size: 1.4rem;
-            font-weight: 600;
             background-color: #004a87;
             color: #ffffff;
         }
-        button:hover { background-color: #0066b8; transform: translateY(-3px); }
-        button:active { transform: scale(0.95); }
-        
         .op { background-color: #007bff; }
-        .clear { grid-column: span 2; background-color: #001a30; color: #80caff; border: 1px solid #004a87; }
+        .clear { grid-column: span 2; background-color: #001a30; }
         .equal { grid-column: span 2; background-color: #00d2ff; color: #002b4e; }
-        .equal:hover { background-color: #ffffff; }
-
-        @media (max-width: 400px) {
-            .calculator { padding: 20px; border-radius: 0; height: 100vh; max-width: 100%; display: flex; flex-direction: column; justify-content: center; }
-        }
     </style>
 </head>
 <body>
@@ -77,18 +65,22 @@ def home():
             <button class="clear" onclick="clearD()">CLEAR</button>
             <button class="op" onclick="add('/')">÷</button>
             <button class="op" onclick="add('*')">×</button>
+
             <button onclick="add('7')">7</button>
             <button onclick="add('8')">8</button>
             <button onclick="add('9')">9</button>
             <button class="op" onclick="add('-')">-</button>
+
             <button onclick="add('4')">4</button>
             <button onclick="add('5')">5</button>
             <button onclick="add('6')">6</button>
             <button class="op" onclick="add('+')">+</button>
+
             <button onclick="add('1')">1</button>
             <button onclick="add('2')">2</button>
             <button onclick="add('3')">3</button>
             <button onclick="add('.')">.</button>
+
             <button onclick="add('0')">0</button>
             <button class="equal" onclick="calc()">=</button>
         </div>
@@ -121,9 +113,13 @@ def home():
 </html>
 """
 
+@app.route('/')
+def home():
+    return render_template_string(HTML_CODE)
+
 @app.route('/health')
 def health():
     return {"status": "OK"}
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000)
+    app.run(host='0.0.0.0', port=5000, debug=True)
